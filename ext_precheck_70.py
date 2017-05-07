@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import re, atexit, sys, os, shutil, codecs, deployment, install_routines, optparse, time, logging, subprocess, socket
+import atexit, re, sys, os, shutil, codecs, deployment, install_routines, optparse, time, logging, subprocess, socket
 
 if not os.path.isfile('poaupdater/uPgBench.py'): os.rename('uPgBench.py','poaupdater/uPgBench.py')
 
