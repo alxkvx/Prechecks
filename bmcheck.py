@@ -1,5 +1,5 @@
 import os, sys, re, collections
-from poaupdater import uSysDB, uLogging, uUtil, uPrecheck
+from poaupdater import uSysDB, uLogging, uUtil, uPrecheck, uPgBench
 from ConfigParser import RawConfigParser, MissingSectionHeaderError
 from tempfile import SpooledTemporaryFile
 
@@ -126,7 +126,135 @@ def db_size():
 		if      len(str(row[2])) < 10: tab2 = '\t\t'
 		if      len(str(row[3])) < 10: tab3 = '\t\t'
 		print " %s%s\t| %s\t\t| %s%s\t| %s%s\t| %s " % (row[0],tab1, row[1], row[2],tab2, row[3],tab3, row[4])
-		
+	
+def pg_perf():
+	print '\n\t************************************ Checking PgSQL DB Performance ************************************\n'
+	
+	errmsg = None
+	pb = uPgBench.PgBench(uSysDB.connect())
+	for testcase in ("sequentialSelect", "sequentialCommit"):
+	print "Running "+testcase+" test..."
+	status, msg = pb.test(testcase)
+	if not status:
+		errmsg = msg
+	print msg
+	
+	if errmsg is not None:
+	print "Required PostgreSQL performance is not achieved: %s" % errmsg
+	
+	print "\nChecking Tables > 100MB without analyze > 1 day:\n"
+	old100MBTablesSQL = """
+	SELECT
+	ts.schemaname AS schema,
+	ts.relname AS tablename,
+	pg_size_pretty(pg_table_size(ts.relid)) AS tablesize,
+	'' || date_trunc('second', now()) - date_trunc('second', GREATEST(ts.last_autoanalyze, ts.last_analyze)) AS last_analyze
+	FROM
+	pg_stat_user_tables AS ts
+	WHERE
+	pg_table_size(ts.relid) > 100*1024*1024
+	AND
+	date_trunc('second', now()) - date_trunc('second', GREATEST(ts.last_autoanalyze, ts.last_analyze)) > interval '1 day'
+	ORDER BY
+	pg_table_size(ts.relid) DESC
+	"""
+	
+	cur.execute(old100MBTablesSQL)
+	oldStat100MBTables = cur.fetchall()
+	if oldStat100MBTables:
+	for t in oldStat100MBTables:
+		tbl = "\"%s\".\"%s\"" % (t[0], t[1])
+		print "Table %s has size %s and was analyzed %s ago."%(tbl, t[2], t[3])
+		print "Perform: ANALYZE %s;" % tbl
+	
+	print "\nChecking Tables Bloat > 100MB:\n"
+	oldBloated100MBTablesSQL = """
+	SELECT Res1.schema,
+		Res1.tablename,
+		pg_size_pretty(Res1.tt_size) table_size,
+		pg_size_pretty(Res1.bloat_size::bigint) bloat_size,
+		CASE Res1.tt_size
+		WHEN 0 THEN '0'
+		ELSE round(Res1.bloat_size::numeric/Res1.tt_size*100, 2)||'%'
+		END bloat_proc,
+		'VACUUM FULL ANALYZE VERBOSE ' || Res1.schema || '."' || Res1.tablename || '";' command_to_run
+	FROM
+	(SELECT res0.schema,
+		res0.tablename,
+		pg_table_size(res0.toid) tt_size,
+		pg_total_relation_size(res0.toid) to_size,
+		GREATEST((res0.heappages + res0.toastpages - (ceil(res0.reltuples/ ((res0.bs-res0.page_hdr) * res0.fillfactor/((4 + res0.tpl_hdr_size + res0.tpl_data_size + (2 * res0.ma)
+		- CASE
+			WHEN res0.tpl_hdr_size%res0.ma = 0 THEN res0.ma
+			ELSE res0.tpl_hdr_size%res0.ma
+			END
+			- CASE
+				WHEN ceil(res0.tpl_data_size)::int%res0.ma = 0 THEN res0.ma
+				ELSE ceil(res0.tpl_data_size)::int%res0.ma
+			END)*100))) + ceil(res0.toasttuples/4))) * res0.bs, 0) AS bloat_size,
+		res0.reltuples tbltuples
+	FROM
+	(SELECT tbl.oid toid,
+		ns.nspname AS SCHEMA,
+		tbl.relname AS tablename,
+		tbl.reltuples,
+		tbl.relpages AS heappages,
+		coalesce(substring(array_to_string(tbl.reloptions, ' ')
+					FROM '%fillfactor=#"__#"%'
+					FOR '#')::smallint, 100) AS fillfactor,
+		coalesce(toast.relpages, 0) AS toastpages,
+		coalesce(toast.reltuples, 0) AS toasttuples,
+		current_setting('block_size')::numeric AS bs,
+		24 AS page_hdr,
+		CASE
+			WHEN version()~'mingw32'
+				OR version()~'64-bit|x86_64|ppc64|ia64|amd64' THEN 8
+			ELSE 4
+		END AS ma,
+		bool_or(att.atttypid = 'pg_catalog.name'::regtype) AS is_na,
+		23 + CASE
+				WHEN MAX(coalesce(s.null_frac,0)) > 0 THEN (7 + count(*)) / 8
+				ELSE 0::int
+			END + CASE
+				WHEN tbl.relhasoids THEN 4
+				ELSE 0
+				END AS tpl_hdr_size,
+				sum((1-coalesce(s.null_frac, 0)) * coalesce(s.avg_width, 1024)) AS tpl_data_size
+		FROM pg_class tbl
+		JOIN pg_namespace AS ns ON ns.oid = tbl.relnamespace
+		JOIN pg_attribute AS att ON att.attrelid = tbl.oid
+		LEFT JOIN pg_class AS TOAST ON toast.oid = tbl.reltoastrelid
+		LEFT JOIN pg_stats AS s ON s.schemaname=ns.nspname
+		AND s.tablename = tbl.relname
+		AND s.inherited=FALSE
+		AND s.attname=att.attname
+		WHERE tbl.relkind = 'r'
+		AND ns.nspname NOT IN ('pg_catalog',
+					'information_schema')
+		AND att.attnum > 0
+		AND NOT att.attisdropped
+		GROUP BY tbl.oid,
+			ns.nspname,
+			tbl.relname,
+			tbl.reltuples,
+			tbl.relpages,
+			fillfactor,
+			toastpages,
+			toasttuples,
+			tbl.relhasoids) Res0) Res1
+	WHERE Res1.tt_size > 100*1024*1024
+	AND Res1.bloat_size/Res1.tt_size > 0.5
+	ORDER BY Res1.bloat_size DESC
+	"""
+	
+	cur.execute(oldBloated100MBTablesSQL)
+	oldBloated100MBTables = cur.fetchall()
+	if oldBloated100MBTables:
+	for t in oldBloated100MBTables:
+		tbl = "\"%s\".\"%s\"" % (t[0], t[1])
+		print "Table %s with size %s has bloat size %s(%s)."%(tbl, t[2], t[3], t[4])
+		print "Perform: VACUUM FULL ANALYZE VERBOSE %s;" % tbl
+	
 uSysDB.init(DBCONF)
 connection = uSysDB.connect()
 cur = connection.cursor()
@@ -134,3 +262,4 @@ cur = connection.cursor()
 plan_len()
 orphan_acc()
 db_size()
+pg_perf()
