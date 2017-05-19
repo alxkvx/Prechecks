@@ -264,10 +264,33 @@ def pgdb():
 	else:
 		print "pattern not found"
 
+def balog():
+	if only != '' and only !='balog': return
+	elif 'balog' in skip: return
+	logging.info('\n\t******************************* Transfer BA prechecker.log to MN *******************************\n')
+	
+	curdir = os.path.dirname(os.path.realpath(__file__))
+	bafile = time.strftime("/ba_prechecker-%Y-%m-%d-%H%M.log", time.localtime())
+	sfile = curdir + '/prechecker.log'
+	dfile = curdir + bafile
+	cur.execute("select host_id from hosts where host_id in (select host_id from components where pkg_id in (select pkg_id from packages where name='PBAApplication'))")
+	try:
+		ba_host_id = cur.fetchone()[0]
+		request = uHCL.Request('1', user='root', group='root')
+		request.transfer(str(ba_host_id), '/var/log/pa/prechecker.log', curdir)
+		try:
+			request.perform()
+			os.rename(sfile,dfile)
+			logging.info("BA prechecker.log file transfererd to %s" % dfile)
+		except Exception, e:
+			logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
+	except Exception, e:
+		logging.info("BA not deployed")
+			
 parser = optparse.OptionParser()
-parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,yum,java,numres,messg,ba,zones,pgdb")
+parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,yum,java,numres,messg,ba,zones,pgdb,balog")
 parser.add_option("-l", "--log", metavar="log", help="path to log file, default: current dir")
-parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgdb")
+parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgdb,balog")
 opts, args = parser.parse_args()
 skip = opts.skip or ''
 only = opts.only or ''
@@ -301,5 +324,6 @@ java_ver()
 zones()
 old_pwd_hashs()
 yum_repos()
+balog()
 
 logging.info("\nlog saved to: %s\n" % logfile)
