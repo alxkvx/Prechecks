@@ -281,7 +281,7 @@ def balog():
 		try:
 			request.perform()
 			os.rename(sfile,dfile)
-			logging.info("BA prechecker.log file transfererd to %s" % dfile)
+			logging.info("BA prechecker.log file transferred to %s" % dfile)
 		except Exception, e:
 			logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 	except Exception, e:
