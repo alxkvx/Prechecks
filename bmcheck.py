@@ -133,14 +133,14 @@ def pg_perf():
 	errmsg = None
 	pb = uPgBench.PgBench(uSysDB.connect())
 	for testcase in ("sequentialSelect", "sequentialCommit"):
-	print "Running "+testcase+" test..."
-	status, msg = pb.test(testcase)
-	if not status:
-		errmsg = msg
-	print msg
+		print "Running "+testcase+" test..."
+		status, msg = pb.test(testcase)
+		if not status:
+			errmsg = msg
+		print msg
 	
 	if errmsg is not None:
-	print "Required PostgreSQL performance is not achieved: %s" % errmsg
+		print "Required PostgreSQL performance is not achieved: %s" % errmsg
 	
 	print "\nChecking Tables > 100MB without analyze > 1 day:\n"
 	old100MBTablesSQL = """
@@ -162,10 +162,10 @@ def pg_perf():
 	cur.execute(old100MBTablesSQL)
 	oldStat100MBTables = cur.fetchall()
 	if oldStat100MBTables:
-	for t in oldStat100MBTables:
-		tbl = "\"%s\".\"%s\"" % (t[0], t[1])
-		print "Table %s has size %s and was analyzed %s ago."%(tbl, t[2], t[3])
-		print "Perform: ANALYZE %s;" % tbl
+		for t in oldStat100MBTables:
+			tbl = "\"%s\".\"%s\"" % (t[0], t[1])
+			print "Table %s has size %s and was analyzed %s ago."%(tbl, t[2], t[3])
+			print "Perform: ANALYZE %s;" % tbl
 	
 	print "\nChecking Tables Bloat > 100MB:\n"
 	oldBloated100MBTablesSQL = """
@@ -250,10 +250,10 @@ def pg_perf():
 	cur.execute(oldBloated100MBTablesSQL)
 	oldBloated100MBTables = cur.fetchall()
 	if oldBloated100MBTables:
-	for t in oldBloated100MBTables:
-		tbl = "\"%s\".\"%s\"" % (t[0], t[1])
-		print "Table %s with size %s has bloat size %s(%s)."%(tbl, t[2], t[3], t[4])
-		print "Perform: VACUUM FULL ANALYZE VERBOSE %s;" % tbl
+		for t in oldBloated100MBTables:
+			tbl = "\"%s\".\"%s\"" % (t[0], t[1])
+			print "Table %s with size %s has bloat size %s(%s)."%(tbl, t[2], t[3], t[4])
+			print "Perform: VACUUM FULL ANALYZE VERBOSE %s;" % tbl
 	
 uSysDB.init(DBCONF)
 connection = uSysDB.connect()
