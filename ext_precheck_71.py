@@ -1,5 +1,4 @@
 #!/usr/bin/python
-#v.1.2.005
 
 import re, atexit, sys, os, shutil, codecs, deployment, install_routines, optparse, time, logging, subprocess, socket
 from poaupdater import uLogging
