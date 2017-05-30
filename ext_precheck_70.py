@@ -393,9 +393,30 @@ def pg_perf():
 			logging.info("Table %s with size %s has bloat size %s(%s)."%(tbl, t[2], t[3], t[4]))
 			logging.info("Perform: VACUUM FULL ANALYZE VERBOSE %s;" % tbl)
 
+def yum_dryrun():
+	if only != '' and only !='dry': return
+	elif 'dry' in skip: return
+	logging.info('\n\t************************************ YUM php-mbstring install dry-run  ************************************\n')
+	
+	cur.execute("select host_id,primary_name from hosts where host_id in (select host_id from components where pkg_id in (select pkg_id from packages where name in ('PBAApplication','PBAOnlineStore')))")
+	for row in cur.fetchall():
+		try:
+			host_id = row[0]
+			hname = row[1]
+			logging.info('\nChecking %s node:\n' % hname)
+			request = uHCL.Request(host_id, user='root', group='root')
+			request.command('yum install php-mbstring', stdout='stdout', stderr='stderr', valid_exit_codes=[0,1])
+			try:
+				out = request.perform()
+				logging.info("%sERRORs:\n%s" % (out['stdout'],out['stderr']))
+			except Exception, e:
+				logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
+		except Exception, e:
+			logging.info("BA not deployed")
+		
 parser = optparse.OptionParser()
-parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf")
-parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf")
+parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
+parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
 parser.add_option("-l", "--log", metavar="log", help="path to log file, default: current dir")
 opts, args = parser.parse_args()
 skip = opts.skip or ''
@@ -430,5 +451,6 @@ java_ver()
 zones()
 pg_perf()
 yum_repos()
+yum_dryrun():
 
 logging.info("\nlog saved to: %s\n" % logfile)
