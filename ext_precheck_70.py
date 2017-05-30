@@ -451,6 +451,6 @@ java_ver()
 zones()
 pg_perf()
 yum_repos()
-yum_dryrun():
+yum_dryrun()
 
 logging.info("\nlog saved to: %s\n" % logfile)
