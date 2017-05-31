@@ -128,7 +128,7 @@ def db_size():
 		print " %s%s\t| %s\t\t| %s%s\t| %s%s\t| %s " % (row[0],tab1, row[1], row[2],tab2, row[3],tab3, row[4])
 	
 def pg_perf():
-	print '\n\t************************************ Checking PgSQL DB Performance ************************************\n'
+	print '\n\t************************************ Checking BA-DB Performance ************************************\n'
 	
 	errmsg = None
 	pb = uPgBench.PgBench(uSysDB.connect())
@@ -254,12 +254,18 @@ def pg_perf():
 			tbl = "\"%s\".\"%s\"" % (t[0], t[1])
 			print "Table %s with size %s has bloat size %s(%s)."%(tbl, t[2], t[3], t[4])
 			print "Perform: VACUUM FULL ANALYZE VERBOSE %s;" % tbl
+
+def stores():
+	print "\n\t===== Checking number of active Online Stores =====\n"
+
+	cur.execute("select count(1) from `StorePackage` where `IsActive` = 1")
+	print "Number of active Online Stores: %s" % cur.fetchone()[0]
 	
 uSysDB.init(DBCONF)
-connection = uSysDB.connect()
-cur = connection.cursor()
+cur = uSysDB.connect().cursor()
 
 plan_len()
 orphan_acc()
 db_size()
+stores()
 pg_perf()

@@ -237,7 +237,7 @@ def ba_res():
 	
 def pg_perf():
 	
-	logging.info('\n\t************************************ Checking PgSQL DB Performance ************************************\n')
+	logging.info('\n\t=============================== Checking OA-DB Performance ===============================\n')
 	
 	proc = subprocess.Popen("grep Servername /usr/local/pem/etc/odbc.ini",stdout=subprocess.PIPE,shell=True)
 	(dbserv, err) = proc.communicate()
@@ -281,8 +281,7 @@ def pg_perf():
 	ORDER BY
 		pg_table_size(ts.relid) DESC
 	"""
-	
-	cur = con.cursor()
+
 	cur.execute(old100MBTablesSQL)
 	oldStat100MBTables = cur.fetchall()
 	if oldStat100MBTables:
@@ -370,7 +369,7 @@ def pg_perf():
 	  AND Res1.bloat_size/Res1.tt_size > 0.5
 	ORDER BY Res1.bloat_size DESC
 	"""
-	cur = con.cursor()
+
 	cur.execute(oldBloated100MBTablesSQL)
 	oldBloated100MBTables = cur.fetchall()
 	if oldBloated100MBTables:
@@ -438,6 +437,8 @@ def main():
 		'pgperf': pg_perf,
 		'dry': yum_dryrun
 	}
+	
+	logging.info("\nOA MN Server Name:\t%s\n" % socket.gethostname())
 	
 	if only != '':
 		disp[only]()
