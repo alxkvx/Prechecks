@@ -1,14 +1,11 @@
 #!/usr/bin/python
 
-import atexit, re, sys, os, shutil, codecs, deployment, install_routines, optparse, time, logging, subprocess, socket
-
+import os, sys, atexit, re, shutil, codecs, deployment, install_routines, optparse, time, logging, subprocess, socket
 if not os.path.isfile('poaupdater/uPgBench.py'): os.rename('uPgBench.py','poaupdater/uPgBench.py')
-
 from poaupdater import uConfig, uLogging, uSysDB, uPEM, uPrecheck, uUtil, openapi, uHCL, uBilling, uPgBench
 
 def diskspace():
-	if only != '' and only !='diskspace': return
-	elif 'diskspace' in skip: return
+
 	logging.info('\n\t============== Checking free space on all nodes (Free space > 1GB) ==============\n')
 	
 	free_space = 1 # GB
@@ -26,8 +23,7 @@ def diskspace():
 			continue
 
 def ui_resources():
-	if only != '' and only !='uires': return
-	elif 'uires' in skip: return
+
 	logging.info("\n\t============== Checking UI/MN nodes resources ==============")
 	
 	cur.execute("select p.host_id, primary_name from proxies p, hosts h where h.host_id=p.host_id and h.htype != 'e'")
@@ -55,8 +51,7 @@ def ui_resources():
 			continue
 
 def mem_winnodes():
-	if only != '' and only !='memwin': return
-	elif 'memwin' in skip: return
+
 	logging.info('\n\t============== Checking free memory on WIN nodes (at risk if less 500MB )==============\n')
 
 	cur.execute("select count(1) from hosts where pleskd_id>0 and htype = 'w'")
@@ -75,8 +70,7 @@ def mem_winnodes():
 			continue
 
 def uiprox_misconf():
-	if only != '' and only !='uiprox': return
-	elif 'uiprox' in skip: return
+
 	logging.info("\n\t============== Checking UI proxies misconfigs in oss DB ==============\n")
 	
 	cur.execute("select brand_id,proxy_id from brand_proxy_params")
@@ -91,8 +85,7 @@ def uiprox_misconf():
 			logging.info("Checking Brand #%s:\tproxy #%s\t[  OK  ]" % (str(brand_id),str(proxy_id)))
 
 def rsync():
-	if only != '' and only !='rsync': return
-	elif 'rsync' in skip: return
+
 	logging.info("\n\t============== Checking rsync on NS nodes ==============\n")
 
 	cur.execute("select s.host_id,primary_name from services s, hosts h where s.name = 'bind9' and h.host_id = s.host_id")
@@ -109,8 +102,7 @@ def rsync():
 			continue
 
 def zones():
-	if only != '' and only !='zones': return
-	elif 'zones' in skip: return
+
 	logging.info("\n\t============== Checking bad zones on NS nodes ==============\n")
 	
 	cur.execute("select s.host_id,primary_name from services s, hosts h where s.name = 'bind9' and h.host_id = s.host_id")
@@ -127,8 +119,7 @@ def zones():
 			continue
 
 def mess_bodies():
-	if only != '' and only !='messg': return
-	elif 'messg' in skip: return
+
 	logging.info("\t============== Checking empty message_bodies ==============\n")
 	
 	cur.execute("select length(message_body) from message_bodies")
@@ -140,8 +131,7 @@ def mess_bodies():
 			continue
 	
 def yum_repos():
-	if only != '' and only !='yum': return
-	elif 'yum' in skip: return
+
 	logging.info("\n\t============== Checking YUM repos on all nodes ==============\n")
 
 	cur.execute("select count(1) from hosts where pleskd_id>0 and htype not in ('w','e')")
@@ -164,8 +154,7 @@ def yum_repos():
 			continue
 
 def java_ver():
-	if only != '' and only !='java': return
-	elif 'java' in skip: return
+
 	logging.info("\n\t======= Checking Java on UI nodes. Note: Java ver. must be 1.7.0 & libgcj and openjdk should NOT(!) be installed =======\n")
 
 	cur.execute("select p.host_id, primary_name from proxies p, hosts h where h.host_id=p.host_id and h.htype != 'e'")
@@ -197,8 +186,7 @@ def java_ver():
 			continue
 
 def num_resources():
-	if only != '' and only !='numres': return
-	elif 'numres' in skip: return
+
 	logging.info("\n\t============== Checking number of accounts/users/subs/oa-db size ==============\n")
 	
 	cur.execute("select count(1) from accounts")
@@ -224,8 +212,7 @@ def num_resources():
 		logging.info(" %s%s    | %s            | %s%s  | %s%s  | %s " % (row[0],tab1, row[1], row[2],tab2, row[3],tab3, row[4]))
 		
 def ba_res():
-	if only != '' and only !='ba': return
-	elif 'ba' in skip: return
+
 	logging.info('\n\t************************************ Checking BA resources ************************************\n')
 	
 	if not os.path.isfile("poaupdater.tgz"):
@@ -249,8 +236,7 @@ def ba_res():
 		logging.info("BA not deployed")
 	
 def pg_perf():
-	if only != '' and only !='pgperf': return
-	elif 'pgperf' in skip: return
+	
 	logging.info('\n\t************************************ Checking PgSQL DB Performance ************************************\n')
 	
 	proc = subprocess.Popen("grep Servername /usr/local/pem/etc/odbc.ini",stdout=subprocess.PIPE,shell=True)
@@ -394,9 +380,8 @@ def pg_perf():
 			logging.info("Perform: VACUUM FULL ANALYZE VERBOSE %s;" % tbl)
 
 def yum_dryrun():
-	if only != '' and only !='dry': return
-	elif 'dry' in skip: return
-	logging.info('\n\t************************************ YUM php-mbstring install dry-run  ************************************\n')
+
+	logging.info('\n\t============================== YUM php-mbstring install dry-run  ==============================\n')
 	
 	cur.execute("select host_id,primary_name from hosts where host_id in (select host_id from components where pkg_id in (select pkg_id from packages where name in ('PBAApplication','PBAOnlineStore')))")
 	for row in cur.fetchall():
@@ -413,44 +398,64 @@ def yum_dryrun():
 				logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 		except Exception, e:
 			logging.info("BA not deployed")
-		
-parser = optparse.OptionParser()
-parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
-parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
-parser.add_option("-l", "--log", metavar="log", help="path to log file, default: current dir")
-opts, args = parser.parse_args()
-skip = opts.skip or ''
-only = opts.only or ''
 
-filename = time.strftime("/ext_precheck_7.0-%Y-%m-%d-%H%M.txt", time.localtime())
-logfile = opts.log or os.path.abspath(os.path.dirname(__file__)) + filename
+def main():
 
-logging.basicConfig(
-	level=logging.DEBUG,
-    format='%(message)s',
-    datefmt='%m-%d %H:%M',
-    filename=logfile,
-    filemode='w')
+	parser = optparse.OptionParser()
+	parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
+	parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
+	parser.add_option("-l", "--log", metavar="log", help="path to log file, default: current dir")
+	opts, args = parser.parse_args()
+	skip = opts.skip or ''
+	only = opts.only or ''
 
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-logging.getLogger('').addHandler(console)
+	filename = time.strftime("/ext_precheck_7.0-%Y-%m-%d-%H%M.txt", time.localtime())
+	logfile = opts.log or os.path.abspath(os.path.dirname(__file__)) + filename
 
-con = uSysDB.connect()
-cur = con.cursor()
+	logging.basicConfig(
+		level=logging.DEBUG,
+		format='%(message)s',
+		datefmt='%m-%d %H:%M',
+		filename=logfile,
+		filemode='w')
 
-num_resources()
-diskspace()
-ui_resources()
-mem_winnodes()
-uiprox_misconf()
-rsync()
-mess_bodies()
-ba_res()
-java_ver()
-zones()
-pg_perf()
-yum_repos()
-yum_dryrun()
+	console = logging.StreamHandler()
+	console.setLevel(logging.INFO)
+	logging.getLogger('').addHandler(console)
 
-logging.info("\nlog saved to: %s\n" % logfile)
+	con = uSysDB.connect()
+	cur = con.cursor()
+	
+	disp = {
+		'diskspace': diskspace,
+		'uires': ui_resources,
+		'uiprox': uiprox_misconf,
+		'memwin': mem_winnodes,
+		'rsync': rsync,
+		'yum': yum_repos,
+		'java': java_ver,
+		'numres': num_resources,
+		'messg': mess_bodies,
+		'ba': ba_res,
+		'zones': zones,
+		'pgperf': pg_perf,
+		'dry': yum_dryrun
+	}
+	
+	if only != '':
+		disp[only]()
+	elif skip != '':
+		sarr = skip.split(",")
+		for f in disp.iterkeys():
+			for xf in sarr:
+				if f == xf:
+					continue
+				else:
+					disp[f]()
+	else:
+		for f in disp.iterkeys():
+			disp[f]()
+
+	logging.info("\nlog saved to: %s\n" % logfile)
+
+main()
