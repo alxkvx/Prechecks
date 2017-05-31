@@ -422,9 +422,6 @@ def main():
 	console = logging.StreamHandler()
 	console.setLevel(logging.INFO)
 	logging.getLogger('').addHandler(console)
-
-	con = uSysDB.connect()
-	cur = con.cursor()
 	
 	disp = {
 		'diskspace': diskspace,
@@ -445,17 +442,14 @@ def main():
 	if only != '':
 		disp[only]()
 	elif skip != '':
-		sarr = skip.split(",")
 		for f in disp.iterkeys():
-			for xf in sarr:
-				if f == xf:
-					continue
-				else:
-					disp[f]()
+			if f in skip: continue
+			else: disp[f]()
 	else:
 		for f in disp.iterkeys():
 			disp[f]()
 
 	logging.info("\nlog saved to: %s\n" % logfile)
 
+cur = uSysDB.connect().cursor()
 main()
