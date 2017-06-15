@@ -224,6 +224,11 @@ def ba_res():
 	try:
 		ba_host_id = cur.fetchone()[0]
 		request = uHCL.Request(ba_host_id, user='root', group='root')
+		request.command("yum install -y python mx pyPgSQL", stdout='stdout', stderr='stderr', valid_exit_codes=[0])
+		try:
+			logging.info(request.perform()['stdout'])
+		except Exception, e:
+	        	logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 		request.transfer('1', bmpath, '/usr/local/bm/tmp/')
 		request.transfer('1', lpath, '/usr/local/bm/tmp/')
 		request.extract('/usr/local/bm/tmp/poaupdater.tgz', '/usr/local/bm/tmp/')
@@ -251,7 +256,7 @@ def pg_perf():
 		else: dbis = "Remote"
 		logging.info("OA DB %s (%s)" % (dbserv,dbis))
 	else:
-		print "pattern not found"
+		logging.info("pattern not found")
 	
 	errmsg = None
 	pb = uPgBench.PgBench(uSysDB.connect())
@@ -398,11 +403,19 @@ def yum_dryrun():
 		except Exception, e:
 			logging.info("BA not deployed")
 
+def aps_module():
+	
+	logging.info('\n\t============================== Check if APS Module installed  ==============================\n')
+	
+	cur.execute("select status from modules where short_name = 'APS'")
+	if cur.fetchone()[0] == 'r': logging.info("\tAPS Module Installed\t\t[  OK  ]")
+	else:   logging.info("\tAPS Module NOT Installed\t\t[  FAILED  ]")
+
 def main():
 
 	parser = optparse.OptionParser()
-	parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
-	parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry")
+	parser.add_option("-s", "--skip", metavar="skip", help="phase to skip: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry,aps")
+	parser.add_option("-o", "--only", metavar="only", help="phase to run only: diskspace,uires,uiprox,memwin,rsync,yum,java,numres,messg,ba,zones,pgperf,dry,aps")
 	parser.add_option("-l", "--log", metavar="log", help="path to log file, default: current dir")
 	opts, args = parser.parse_args()
 	skip = opts.skip or ''
@@ -435,7 +448,8 @@ def main():
 		'ba': ba_res,
 		'zones': zones,
 		'pgperf': pg_perf,
-		'dry': yum_dryrun
+		'dry': yum_dryrun,
+		'aps': aps_module
 	}
 	
 	logging.info("\nOA MN Server Name:\t%s\n" % socket.gethostname())
