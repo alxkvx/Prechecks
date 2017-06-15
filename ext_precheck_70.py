@@ -232,7 +232,7 @@ def ba_res():
 		request.transfer('1', bmpath, '/usr/local/bm/tmp/')
 		request.transfer('1', lpath, '/usr/local/bm/tmp/')
 		request.extract('/usr/local/bm/tmp/poaupdater.tgz', '/usr/local/bm/tmp/')
-		request.command('python /usr/local/bm/tmp/bmcheck.py', stdout='stdout', stderr='stderr', valid_exit_codes=[0,1])
+		request.command('python /usr/local/bm/tmp/bmcheck.py', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
 		try:
 			logging.info(request.perform()['stdout'])
 		except Exception, e:
