@@ -147,7 +147,7 @@ def old_pwd_hashs():
 	elif 'pwds' in skip: return
 	logging.info("\n\t============== Checking accounts with Crypt pwd hashes   ==============\n")
 	
-	cur.execute("select * from local_identities where pwd_type='Crypt' and pwd_hash like '$5$%'")
+	cur.execute("SELECT u.user_id,i.identity_id,i.login,li.pwd_hash,li.pwd_type FROM identities i, local_identities li, users u WHERE u.auth_identity_id = i.identity_id AND i.identity_id = li.identity_id AND li.pwd_type = 'Crypt' AND li.pwd_hash like '$5$%'")
 	fl = cur.fetchone()
 	if fl is None:
 		logging.info("\t[  OK  ]        No Hashes with Crypt type")
@@ -156,7 +156,7 @@ def old_pwd_hashs():
 		logging.info(" %s       | %s    | %s  | %s      | %s" % (fl[0], fl[1], fl[2], fl[3], fl[4]))
 		for row in cur.fetchall():
 			logging.info(" %s       | %s    | %s  | %s      | %s" % (row[0], row[1], row[2], row[3], row[4]))
-		logging.info("\nFor users above password should be re-set to PA_Standard_Hash using pem.setMemberPassword as example")
+		logging.info("\nFor users above password should be re-set to PA_Standard_Hash using pem.setMemberPassword as example or reset by users using *Forgot Password* link")
 
 def java_ver():
 	if only != '' and only !='java': return
@@ -236,7 +236,7 @@ def ba_res():
 		request.transfer('1', bmpath, '/usr/local/bm/tmp/')
 		request.transfer('1', lpath, '/usr/local/bm/tmp/')
 		request.extract('/usr/local/bm/tmp/poaupdater.tgz', '/usr/local/bm/tmp/')
-		request.command('python /usr/local/bm/tmp/bmcheck.py', stdout='stdout', stderr='stderr', valid_exit_codes=[0,1])
+		request.command('python /usr/local/bm/tmp/bmcheck.py', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
 		try:
 			logging.info(request.perform()['stdout'])
 		except Exception, e:

@@ -60,10 +60,37 @@ class DBConfig:
         self.database_type = type
         self.database_odbc_driver = odbc_driver
         self.reinstall = False
+
+class MultipleConfigReader(_ConfigReader):
+	VAR = re.compile('^\$\((.*)\)$')
+	
+	def __init__(self, pathes=[]):
+		_ConfigReader.__init__(self)
+		resolved_ref_options = dict()
+		for path in pathes:
+			tmp = _ConfigReader()
+			tmp.read(path)
+			for section in tmp.sections():
+				for option in tmp.options(section):
+					m = MultipleConfigReader.VAR.match(tmp.get(section, option))
+					if m:  # simple resolve values like $(HOST_IP), not recursive, not complrx string
+						def resolve_ref_option(section, option, parent_cr, ref_option):
+							if parent_cr.has_option(section, ref_option):
+								resolved_ref_options['%s.%s' % (section, option)] = parent_cr.get(section, ref_option)
+								return True
+							return False
 		
-path_global_conf = os.path.join(PBA_ROOT, 'etc', 'ssm.conf.d', 'global.conf')
-if os.path.exists(path_global_conf):
-	CONF = ConfigReader(path_global_conf)
+						for parent_cr in [tmp, self]:
+							if resolve_ref_option(section, option, parent_cr, m.group(1)):
+								break
+		
+			self.read(path)
+			self.update(resolved_ref_options)
+
+path_dot_global_conf = os.path.join(PBA_ROOT, 'etc/ssm.conf.d/.global.conf')
+path_global_conf = os.path.join(PBA_ROOT, 'etc/ssm.conf.d/global.conf')
+if os.path.exists(path_dot_global_conf) or os.path.exists(path_global_conf):
+	CONF = MultipleConfigReader([path_dot_global_conf, path_global_conf])
 	from ConfigParser import NoSectionError
 	try:
 		DBCONF = DBConfig(CONF.get('environment', 'DB_HOST'), CONF.get('environment', 'DB_NAME'), CONF.get('environment', 'DB_USER'), CONF.get('environment', 'DB_PASSWD'), 'PGSQL')
