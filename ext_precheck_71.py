@@ -161,7 +161,7 @@ def old_pwd_hashs():
 def java_ver():
 	if only != '' and only !='java': return
 	elif 'java' in skip: return
-	logging.info("\n\t======= Checking Java on UI nodes. Note: Java ver. must be 1.7.0 & libgcj and openjdk should NOT(!) be installed =======\n")
+	logging.info("\n\t======= Checking Java on UI nodes. Note: Java ver. must be 1.8.0 & libgcj and openjdk should NOT(!) be installed =======\n")
 
 	cur.execute("select p.host_id, primary_name from proxies p, hosts h where h.host_id=p.host_id and h.htype != 'e'")
  
