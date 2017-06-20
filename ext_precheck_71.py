@@ -65,11 +65,23 @@ def mem_winnodes():
 	for row in cur.fetchall():
 		host_id = row[0]
 		name = row[1]
-		logging.info("Host #%s %s" % (str(host_id),name))
+		logging.info("\nHost #%s %s" % (str(host_id),name))
+
 		request = uHCL.Request(host_id, user='root', group='root')
-		request.command('systeminfo |find "Physical Memory"', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
+		request.command('wmic computersystem get TotalPhysicalMemory & wmic OS get FreePhysicalMemory', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
+
 		try:
-			logging.info(request.perform()['stdout'])
+			result = re.findall(r'\d+', request.perform()['stdout'])
+
+			if result:
+				total = int(result[0]) / 4**10
+				free = int(result[1]) / 1024
+
+				logging.info("\nTotal: %s MB\nFree: %s MB" % (total, free))
+				logging.info("[ OK ]") if free > 512 else logging.info("[ FAILED ]")
+			else:
+				logging.info("FAILED: cannot process the output from wmic computersystem get TotalPhysicalMemory")
+
 		except Exception, e:
 			logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 			continue
