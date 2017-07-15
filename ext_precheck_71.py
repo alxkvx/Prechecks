@@ -111,11 +111,19 @@ def zones():
 	for row in cur.fetchall():
 		host_id = row[0]
 		host_name = row[1]
-		logging.info("Host #%s %s:" % (str(host_id),host_name))
+		logging.info("\nHost #%s %s:" % (str(host_id),host_name))
 		request = uHCL.Request(host_id, user='root', group='root')
-		request.command('/usr/sbin/named-checkconf -z -t /var/named/chroot/ /etc/named.conf | grep -i bad || echo "Bad zones not found"', stdout='stdout', stderr='stderr', valid_exit_codes=[0,1])
+		request.command('/usr/sbin/named-checkconf -z -t /var/named/chroot /etc/named.conf', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
 		try:
-			logging.info(request.perform()['stdout'])
+			bad_zones = []
+			for line in request.perform()['stdout'].split("\n"):
+				if "bad zone" in line.lower():
+					bad_zones.append(line)
+
+			if bad_zones:
+				logging.info("\n".join(bad_zones))
+			else:
+				logging.info("No bad zones")
 		except Exception, e:
 			logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 			continue
