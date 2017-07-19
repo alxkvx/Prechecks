@@ -65,11 +65,23 @@ def mem_winnodes():
 	for row in cur.fetchall():
 		host_id = row[0]
 		name = row[1]
-		logging.info("Host #%s %s" % (str(host_id),name))
+		logging.info("\nHost #%s %s" % (str(host_id),name))
+
 		request = uHCL.Request(host_id, user='root', group='root')
-		request.command('systeminfo |find "Physical Memory"', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
+		request.command('wmic computersystem get TotalPhysicalMemory & wmic OS get FreePhysicalMemory', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
+
 		try:
-			logging.info(request.perform()['stdout'])
+			result = re.findall(r'\d+', request.perform()['stdout'])
+
+			if result:
+				total = int(result[0]) / 4**10
+				free = int(result[1]) / 1024
+
+				logging.info("\nTotal: %s MB\nFree: %s MB" % (total, free))
+				logging.info("[ OK ]") if free > 512 else logging.info("[ FAILED ]")
+			else:
+				logging.info("FAILED: cannot process the output from wmic computersystem get TotalPhysicalMemory")
+
 		except Exception, e:
 			logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 			continue
@@ -99,11 +111,19 @@ def zones():
 	for row in cur.fetchall():
 		host_id = row[0]
 		host_name = row[1]
-		logging.info("Host #%s %s:" % (str(host_id),host_name))
+		logging.info("\nHost #%s %s:" % (str(host_id),host_name))
 		request = uHCL.Request(host_id, user='root', group='root')
-		request.command('/usr/sbin/named-checkconf -z -t /var/named/chroot/ /etc/named.conf | grep -i bad || echo "Bad zones not found"', stdout='stdout', stderr='stderr', valid_exit_codes=[0,1])
+		request.command('/usr/sbin/named-checkconf -z -t /var/named/chroot /etc/named.conf', stdout='stdout', stderr='stderr', valid_exit_codes=[0])
 		try:
-			logging.info(request.perform()['stdout'])
+			bad_zones = []
+			for line in request.perform()['stdout'].split("\n"):
+				if "bad zone" in line.lower():
+					bad_zones.append(line)
+
+			if bad_zones:
+				logging.info("\n".join(bad_zones))
+			else:
+				logging.info("No bad zones")
 		except Exception, e:
 			logging.info("pa-agent failed...please check poa.log on the node\n %s\n" % str(e))
 			continue
@@ -161,7 +181,7 @@ def old_pwd_hashs():
 def java_ver():
 	if only != '' and only !='java': return
 	elif 'java' in skip: return
-	logging.info("\n\t======= Checking Java on UI nodes. Note: Java ver. must be 1.7.0 & libgcj and openjdk should NOT(!) be installed =======\n")
+	logging.info("\n\t======= Checking Java on UI nodes. Note: Java ver. must be 1.8.0 & libgcj and openjdk should NOT(!) be installed =======\n")
 
 	cur.execute("select p.host_id, primary_name from proxies p, hosts h where h.host_id=p.host_id and h.htype != 'e'")
  
